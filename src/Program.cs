@@ -15,8 +15,6 @@ internal static class Program
         CheckArguments(args);
         LoadExcludedDirList();
         
-        //create event handler for Ctrl+C
-
         Console.CancelKeyPress += ConsoleCancelKeyPressEvent;
         
         var tree = new TreeNode("ROOT");

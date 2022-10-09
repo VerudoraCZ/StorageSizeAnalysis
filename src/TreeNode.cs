@@ -142,7 +142,7 @@ public static class TreeNodeExtensions
         {
             nId = node.Id.Pastel(Orange);
         }
-        //var nSize = node.GetSumOfAllChildrenSizes().BytesToString().Pastel(Color.DarkOrange);
+
         var nSize = node.TotalSize.BytesToString().Pastel(Blue);
         
         if (last && !first)
