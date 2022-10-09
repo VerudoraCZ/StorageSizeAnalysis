@@ -53,11 +53,7 @@ internal static class Program
                 $"Printed tree structure to std.output. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)"
                     .Pastel(LimeGreen));
         #endregion
-
-        /*//Get pointer of variable "tree"
-        var treePtr = GCHandle.Alloc(tree, GCHandleType.Pinned);
-        IntPtr treeIntPtr = treePtr.AddrOfPinnedObject();
-        var treeRef = (TreeNode) Marshal.PtrToStructure(treeIntPtr, typeof(TreeNode));*/
+        
 
         PrintEndingMessage(dirs, tree);
 

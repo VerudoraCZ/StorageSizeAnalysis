@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Diagnostics;
-using System.Drawing;
 using Pastel;
+using static System.Drawing.Color;
 
 namespace StorageSizeAnalysis;
 
@@ -137,13 +137,13 @@ public static class TreeNodeExtensions
     public static void Print(this TreeNode node, int depth = -1, string indent = "", bool last = true, bool first = true)
     {
         //get current line length
-        var nId = node.Id.Pastel(Color.OrangeRed);
+        var nId = node.Id.Pastel(OrangeRed);
         if (node.GetRoot().GetEnds().Contains(node))
         {
-            nId = node.Id.Pastel(Color.Orange);
+            nId = node.Id.Pastel(Orange);
         }
         //var nSize = node.GetSumOfAllChildrenSizes().BytesToString().Pastel(Color.DarkOrange);
-        var nSize = node.TotalSize.BytesToString().Pastel(Color.Blue);
+        var nSize = node.TotalSize.BytesToString().Pastel(Blue);
         
         if (last && !first)
         {
