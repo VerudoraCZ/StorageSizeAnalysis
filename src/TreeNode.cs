@@ -355,7 +355,6 @@ public static class TreeNodeExtensions
 
     #endregion
 
-
     public static void CalculateTotalSize(this TreeNode node)
     {
         var endingNodes = node.GetEnds();
@@ -392,7 +391,6 @@ public static class TreeNodeExtensions
             }
         }
     }*/
-
 
     public static void AddSafe(this TreeNode parent, TreeNode child)
     {
