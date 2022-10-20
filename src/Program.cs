@@ -44,7 +44,7 @@ internal static class Program
         #region argRoot.SortChildren();
 
         stp.Start();
-        argRoot.SortChildren();
+        argRoot.SortChildren(int.TryParse(args[2], out var sortType) ? sortType : 0);
         stp.Stop();
         Console.WriteLine($"Sorted tree structure by total size. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)"
             .Pastel(LimeGreen));
