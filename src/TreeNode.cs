@@ -56,7 +56,7 @@ public class TreeNode : IEnumerable<TreeNode>
     }
 
     //sort children by total size
-    public void SortChildren()
+    private void SortChildren()
     {
         _children = _children.OrderByDescending(x => x.Value.TotalSize).ToDictionary(x => x.Key, x => x.Value);
     }
