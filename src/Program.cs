@@ -10,55 +10,66 @@ namespace StorageSizeAnalysis;
 internal static class Program
 {
     private static string[] _excluded = null!;
+
     public static void Main(string[] args)
     {
         CheckArguments(args);
         LoadExcludedDirList();
-        
+
         Console.CancelKeyPress += ConsoleCancelKeyPressEvent;
-        
+
         var tree = new TreeNode("ROOT");
         if (args[0].EndsWith('\\')) args[0] = args[0].TrimEnd('\\');
-        
+
         var dirs = CombineAllDirectoriesToList(args);
         CombineDirectoriesAndSizes(dirs, tree);
 
         var stp = new Stopwatch();
+
         #region tree.CalculateTotalSize();
-            stp.Start();
-            tree.CalculateTotalSize();
-            stp.Stop();
-            Console.WriteLine($"Calculated total size for each directory. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)".Pastel(LimeGreen));
-            stp.Reset();
+
+        stp.Start();
+        tree.CalculateTotalSize();
+        stp.Stop();
+        Console.WriteLine(
+            $"Calculated total size for each directory. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)"
+                .Pastel(LimeGreen));
+        stp.Reset();
+
         #endregion
 
         var argRoot = tree.GetNodeFromPath(args[0]);
         argRoot.SetParent(null);
 
         #region argRoot.SortChildren();
-            stp.Start();
-            argRoot.SortChildren();
-            stp.Stop();
-            Console.WriteLine($"Sorted tree structure by total size. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)".Pastel(LimeGreen));
-            stp.Reset();
+
+        stp.Start();
+        argRoot.SortChildren();
+        stp.Stop();
+        Console.WriteLine($"Sorted tree structure by total size. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)"
+            .Pastel(LimeGreen));
+        stp.Reset();
+
         #endregion
-        
+
         #region PrintDirectoryTree(args, argRoot);
-            stp.Start();
-            PrintDirectoryTree(args, argRoot);
-            stp.Stop();
-            Console.WriteLine(Environment.NewLine +
-                $"Printed tree structure to std.output. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)"
-                    .Pastel(LimeGreen));
+
+        stp.Start();
+        PrintDirectoryTree(args, argRoot);
+        stp.Stop();
+        Console.WriteLine(Environment.NewLine +
+                          $"Printed tree structure to std.output. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)"
+                              .Pastel(LimeGreen));
+
         #endregion
-        
+
 
         PrintEndingMessage(dirs, tree);
 
         SaveExcludedDirList();
     }
-    
-    
+
+
     private static void ConsoleCancelKeyPressEvent(object? sender, ConsoleCancelEventArgs e)
     {
         SaveExcludedDirList();
@@ -80,7 +91,7 @@ internal static class Program
         try
         {
             stp.Start();
-            
+
             var dirs = new List<string>();
             var dirTasks = GetDirectories(args[0], int.Parse(args[1]) - 1);
             Task.WaitAll(dirTasks.ToArray<Task>());
@@ -88,13 +99,14 @@ internal static class Program
             {
                 dirs.AddRange(dirTask.Result);
             }
-            
+
             return dirs;
         }
         finally
         {
             stp.Stop();
-            Console.WriteLine($"All directories fetched. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)".Pastel(LimeGreen));
+            Console.WriteLine(
+                $"All directories fetched. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)".Pastel(LimeGreen));
         }
     }
 
@@ -104,7 +116,7 @@ internal static class Program
         try
         {
             stp.Start();
-            
+
             var tasks = CompileDirsAndSizes(dirs.ToArray());
             Task.WaitAll(tasks.ToArray<Task>());
             foreach (var treeNode in tasks.SelectMany(task => task.Result))
@@ -115,7 +127,8 @@ internal static class Program
         finally
         {
             stp.Stop();
-            Console.WriteLine($"Directory data combined. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)".Pastel(LimeGreen));
+            Console.WriteLine(
+                $"Directory data combined. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)".Pastel(LimeGreen));
         }
     }
 
@@ -134,16 +147,15 @@ internal static class Program
 
     private static void CheckArguments(string[] args)
     {
-        if (args.Length < 3)                            PrintHelp("Not enough arguments.");
-        if (!args[0].EndsWith('\\'))                    args[0] += '\\';
-        if (!Directory.Exists(args[0]))                 PrintHelp("Invalid directory path.");
-        if (!int.TryParse(args[1], out var depth))      PrintHelp("Invalid depth.");
+        if (args.Length < 3) PrintHelp("Not enough arguments.");
+        if (!args[0].EndsWith('\\')) args[0] += '\\';
+        if (!Directory.Exists(args[0])) PrintHelp("Invalid directory path.");
+        if (!int.TryParse(args[1], out var depth)) PrintHelp("Invalid depth.");
         if (!int.TryParse(args[2], out var printDepth)) PrintHelp("Invalid print depth.");
-        if (depth < 1)                                  PrintHelp("Depth must be greater than 0.");
-        if (printDepth < 0)                             PrintHelp("Print depth must be greater than or equal to 0.");
-        
+        if (depth < 1) PrintHelp("Depth must be greater than 0.");
+        if (printDepth < 0) PrintHelp("Print depth must be greater than or equal to 0.");
     }
-    
+
     private static void SaveExcludedDirList()
     {
         try
@@ -175,7 +187,8 @@ internal static class Program
         finally
         {
             stp.Stop();
-            Console.WriteLine($"Excluded directory list loaded. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)".Pastel(LimeGreen));
+            Console.WriteLine($"Excluded directory list loaded. ({Math.Round(stp.ElapsedMilliseconds / 1000.0D, 2)}s)"
+                .Pastel(LimeGreen));
         }
     }
 
@@ -212,6 +225,7 @@ internal static class Program
                 return GetSubDirectories(dir, depth).Where(d => !_excluded.Any(d.StartsWith)).ToList();
             }));
         }
+
         return tasks;
     }
 
@@ -224,6 +238,7 @@ internal static class Program
             {
                 return new List<string>();
             }
+
             var resultDirectories = new List<string>();
             var directories = Directory.GetDirectories(path);
             foreach (var directory in directories)
@@ -250,7 +265,7 @@ internal static class Program
             return new List<string>();
         }
     }
-    
+
     private static long GetSizeOfDirectory(string path)
     {
         /*var files = Directory.GetFiles(path);
@@ -262,15 +277,22 @@ internal static class Program
             {
                 return 0;
             }
-            return Directory.GetFiles(path).Select(file => new FileInfo(file)).Select(fileInfo => fileInfo.Length).Sum();
+
+            return Directory.GetFiles(path).Select(file => new FileInfo(file)).Select(fileInfo => fileInfo.Length)
+                .Sum();
         }
         catch (UnauthorizedAccessException)
         {
             Console.WriteLine($"Unauthorized Access (Not included): {path}".Pastel(Red));
             return 0;
         }
+        catch (DirectoryNotFoundException)
+        {
+            Console.WriteLine($"Could not find a part of the path (Not included): {path}".Pastel(Red));
+            return 0;
+        }
     }
-    
+
     private static void PrintHelp(string msg = "")
     {
         Console.WriteLine(msg);
@@ -278,7 +300,7 @@ internal static class Program
         Console.WriteLine(@"Example: StorageSizeAnalysis.exe ""C:\Games"" 2 0");
         Environment.Exit(1);
     }
-    
+
     private static string BytesToString(this long byteCount)
     {
         string[] suf = {" B", " KB", " MB", " GB", " TB", " PB", " EB"}; //Longs run out around EB
@@ -289,7 +311,7 @@ internal static class Program
         double num = Math.Round(bytes / Math.Pow(1024, place), 1);
         return Math.Sign(byteCount) * num + suf[place];
     }
-    
+
     private static IEnumerable<List<T>> ChunkBy<T>(this IEnumerable<T> source, int chunkSize)
     {
         while (source.Any())
