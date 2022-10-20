@@ -85,7 +85,7 @@ internal static class Program
         Console.WriteLine($"Total Size: {tree.GetSumOfAllChildrenSizes().BytesToString().Pastel(LimeGreen)}");
     }
 
-    private static List<string> CombineAllDirectoriesToList(string[] args)
+    private static List<string> CombineAllDirectoriesToList(IReadOnlyList<string> args)
     {
         var stp = new Stopwatch();
         try
@@ -95,10 +95,7 @@ internal static class Program
             var dirs = new List<string>();
             var dirTasks = GetDirectories(args[0], int.Parse(args[1]) - 1);
             Task.WaitAll(dirTasks.ToArray<Task>());
-            foreach (var dirTask in dirTasks)
-            {
-                dirs.AddRange(dirTask.Result);
-            }
+            foreach (var dirTask in dirTasks) dirs.AddRange(dirTask.Result);
 
             return dirs;
         }
@@ -119,10 +116,7 @@ internal static class Program
 
             var tasks = CompileDirsAndSizes(dirs.ToArray());
             Task.WaitAll(tasks.ToArray<Task>());
-            foreach (var treeNode in tasks.SelectMany(task => task.Result))
-            {
-                tree.AddSafe(treeNode);
-            }
+            foreach (var treeNode in tasks.SelectMany(task => task.Result)) tree.AddSafe(treeNode);
         }
         finally
         {
@@ -132,22 +126,18 @@ internal static class Program
         }
     }
 
-    private static void PrintDirectoryTree(string[] args, TreeNode argRoot)
+    private static void PrintDirectoryTree(IReadOnlyList<string> args, TreeNode argRoot)
     {
         var depth = int.Parse(args[2]);
         if (depth == 0)
-        {
             argRoot.Print();
-        }
         else
-        {
-            argRoot.Print(depth: depth);
-        }
+            argRoot.Print(depth);
     }
 
-    private static void CheckArguments(string[] args)
+    private static void CheckArguments(IList<string> args)
     {
-        if (args.Length < 3) PrintHelp("Not enough arguments.");
+        if (args.Count < 3) PrintHelp("Not enough arguments.");
         if (!args[0].EndsWith('\\')) args[0] += '\\';
         if (!Directory.Exists(args[0])) PrintHelp("Invalid directory path.");
         if (!int.TryParse(args[1], out var depth)) PrintHelp("Invalid depth.");
@@ -192,24 +182,17 @@ internal static class Program
         }
     }
 
-    private static List<Task<List<TreeNode>>> CompileDirsAndSizes(string[] dirs)
+    private static IList<Task<List<TreeNode>>> CompileDirsAndSizes(string[] dirs)
     {
         var chunks = dirs.ChunkBy(500);
-        var tasks = new List<Task<List<TreeNode>>>();
-        foreach (var chunk in chunks)
-        {
-            tasks.Add(Task.Run(() =>
+        var tasks = chunks.Select(chunk => Task.Run(() =>
             {
-                var nodes = new List<TreeNode>();
-                foreach (var dir in chunk)
-                {
-                    var node = TreeNodeExtensions.CreateNodeFromPath(dir, GetSizeOfDirectory(dir));
-                    nodes.Add(node);
-                }
+                var nodes = chunk.Select(dir => TreeNodeExtensions.CreateNodeFromPath(dir, GetSizeOfDirectory(dir)))
+                    .ToList();
 
                 return nodes;
-            }));
-        }
+            }))
+            .ToList();
 
         return tasks;
     }
@@ -217,16 +200,11 @@ internal static class Program
     private static List<Task<List<string>>> GetDirectories(string path, int depth)
     {
         var dirs = Directory.GetDirectories(path + "\\").Where(d => !_excluded.Any(d.StartsWith));
-        var tasks = new List<Task<List<string>>>();
-        foreach (var dir in dirs)
-        {
-            tasks.Add(Task.Run(() =>
-            {
-                return GetSubDirectories(dir, depth).Where(d => !_excluded.Any(d.StartsWith)).ToList();
-            }));
-        }
 
-        return tasks;
+        return dirs.Select(dir => Task.Run(() =>
+        {
+            return GetSubDirectories(dir, depth).Where(d => !_excluded.Any(d.StartsWith)).ToList();
+        })).ToList();
     }
 
     private static IEnumerable<string> GetSubDirectories(string path, int depth)
@@ -234,10 +212,7 @@ internal static class Program
         path += "\\";
         try
         {
-            if (_excluded.Any(path.StartsWith))
-            {
-                return new List<string>();
-            }
+            if (_excluded.Any(path.StartsWith)) return new List<string>();
 
             var resultDirectories = new List<string>();
             var directories = Directory.GetDirectories(path);
@@ -245,10 +220,7 @@ internal static class Program
             {
                 /*Console.WriteLine(directory);*/
                 resultDirectories.Add(directory);
-                if (depth > 0)
-                {
-                    resultDirectories.AddRange(GetSubDirectories(directory, depth - 1));
-                }
+                if (depth > 0) resultDirectories.AddRange(GetSubDirectories(directory, depth - 1));
             }
 
             return resultDirectories;
@@ -273,10 +245,7 @@ internal static class Program
         try
         {
             //check if path is empty
-            if (Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0)
-            {
-                return 0;
-            }
+            if (Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0) return 0;
 
             return Directory.GetFiles(path).Select(file => new FileInfo(file)).Select(fileInfo => fileInfo.Length)
                 .Sum();
@@ -306,9 +275,9 @@ internal static class Program
         string[] suf = {" B", " KB", " MB", " GB", " TB", " PB", " EB"}; //Longs run out around EB
         if (byteCount == 0)
             return "0" + suf[0];
-        long bytes = Math.Abs(byteCount);
-        int place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
-        double num = Math.Round(bytes / Math.Pow(1024, place), 1);
+        var bytes = Math.Abs(byteCount);
+        var place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
+        var num = Math.Round(bytes / Math.Pow(1024, place), 1);
         return Math.Sign(byteCount) * num + suf[place];
     }
 

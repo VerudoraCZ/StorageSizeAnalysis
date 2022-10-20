@@ -6,12 +6,8 @@ namespace StorageSizeAnalysis;
 
 public class TreeNode : IEnumerable<TreeNode>
 {
-    private Dictionary<string, TreeNode> _children = new();
-
     public readonly string Id;
-    public long IsolatedSize { get; set; }
-    public long TotalSize { get; set; }
-    public TreeNode? Parent { get; private set; }
+    private Dictionary<string, TreeNode> _children = new();
 
     public TreeNode(string id, long isolatedSize = 0, long totalSize = 0)
     {
@@ -20,14 +16,33 @@ public class TreeNode : IEnumerable<TreeNode>
         TotalSize = totalSize;
     }
 
+    public long IsolatedSize { get; set; }
+    public long TotalSize { get; set; }
+    public TreeNode? Parent { get; private set; }
+
+    public bool HasChildren => _children.Count > 0;
+
+    public int Count => _children.Count;
+
+    public IEnumerator<TreeNode> GetEnumerator()
+    {
+        return _children.Values.GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+
     public void SetParent(TreeNode? parent)
     {
         Parent = parent;
     }
 
-    public bool HasChildren => _children.Count > 0;
-
-    public bool HasChild(string id) => _children.ContainsKey(id);
+    public bool HasChild(string id)
+    {
+        return _children.ContainsKey(id);
+    }
 
     public TreeNode GetChild(string id)
     {
@@ -77,26 +92,11 @@ public class TreeNode : IEnumerable<TreeNode>
 
     public void Add(TreeNode item)
     {
-        if (item.Parent != null)
-        {
-            item.Parent._children.Remove(item.Id);
-        }
+        item.Parent?._children.Remove(item.Id);
 
         item.Parent = this;
         _children.Add(item.Id, item);
     }
-
-    public IEnumerator<TreeNode> GetEnumerator()
-    {
-        return _children.Values.GetEnumerator();
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
-
-    public int Count => _children.Count;
 
     public void Clear()
     {
@@ -123,20 +123,17 @@ public static class TreeNodeExtensions
     private static string BytesToString(this long byteCount)
     {
         string[] suf = {" B", " KB", " MB", " GB", " TB", " PB", " EB"}; //Longs run out around EB
-        if (byteCount == 0) return "0" + suf[0];
+        if (byteCount == 0) return $"0{suf[0]}";
 
         var bytes = Math.Abs(byteCount);
         var place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
         var num = Math.Round(bytes / Math.Pow(1024, place), 1);
-        return Math.Sign(byteCount) * num + suf[place];
+        return $"{Math.Sign(byteCount) * num}{suf[place]}";
     }
 
     private static TreeNode GetRoot(this TreeNode node)
     {
-        while (node.Parent != null)
-        {
-            node = node.Parent;
-        }
+        while (node.Parent != null) node = node.Parent;
 
         return node;
     }
@@ -146,10 +143,7 @@ public static class TreeNodeExtensions
     {
         //get current line length
         var nId = node.Id.Pastel(OrangeRed);
-        if (node.GetRoot().GetEnds().Contains(node))
-        {
-            nId = node.Id.Pastel(Orange);
-        }
+        if (node.GetRoot().GetEnds().Contains(node)) nId = node.Id.Pastel(Orange);
 
         var nSize = node.TotalSize.BytesToString().Pastel(Blue);
 
@@ -178,7 +172,7 @@ public static class TreeNodeExtensions
         {
             if (depth <= 0) return;
             for (var i = 0; i < node.Count; i++)
-                node.GetChildren()[i].Print(depth: depth - 1, indent: indent, last: i == node.Count - 1, first: false);
+                node.GetChildren()[i].Print(depth - 1, indent, i == node.Count - 1, false);
         }
     }
 
@@ -205,10 +199,7 @@ public static class TreeNodeExtensions
         if (!node.HasChildren) return node.IsolatedSize;
 
         var sum = node.IsolatedSize;
-        foreach (var child in node.GetChildren())
-        {
-            sum += child.GetSumOfAllChildrenSizes();
-        }
+        foreach (var child in node.GetChildren()) sum += child.GetSumOfAllChildrenSizes();
 
         return sum;
     }
@@ -223,7 +214,6 @@ public static class TreeNodeExtensions
     {
         var pathParts = path.Split('\\');
         foreach (var pathPart in pathParts)
-        {
             if (node.HasChildren)
             {
                 node = node.GetChild(pathPart);
@@ -233,7 +223,6 @@ public static class TreeNodeExtensions
                 Console.WriteLine(nameof(GetNodeFromPath));
                 return null!;
             }
-        }
 
         return node;
     }
@@ -251,6 +240,48 @@ public static class TreeNodeExtensions
         return path;
     }
 
+    public static void CalculateTotalSize(this TreeNode node)
+    {
+        var endingNodes = node.GetEnds();
+        var generations = node.SplitByGeneration();
+        for (var i = generations.Count - 1; i >= 1; i--)
+        for (var j = 0; j < generations[i].Count; j++)
+            if (endingNodes.Contains(generations[i][j]))
+                generations[i][j].TotalSize = generations[i][j].IsolatedSize;
+            else
+                generations[i][j].TotalSize =
+                    generations[i][j].GetSumOfChildrenTotalSizes() + generations[i][j].IsolatedSize;
+    }
+
+    private static void EliminateSiblings(this IList<TreeNode> ends)
+    {
+        for (var i = 0; i < ends.Count; i++)
+        for (var j = i + 1; j < ends.Count; j++)
+        {
+            if (ends[i].Parent is null) continue;
+            if (ends[i].Parent != ends[j].Parent) continue;
+            ends.RemoveAt(j);
+            j--;
+        }
+    }
+
+    public static void AddSafe(this TreeNode parent, TreeNode child)
+    {
+        // recursively check for child.Id in parent.GetChildrenDictionary keys
+        if (parent.HasChild(child.Id))
+        {
+            // if child.Id is found, get the child from the dictionary
+            var existingChild = parent.GetChild(child.Id);
+            // add the child's children to the existing child
+            foreach (var grandchild in child.GetChildren()) existingChild.AddSafe(grandchild);
+        }
+        else
+        {
+            // if child.Id is not found, add the child to the parent
+            parent.Add(child);
+        }
+    }
+
     #region Node Population
 
     //Populate TreeNode from from Path
@@ -258,7 +289,6 @@ public static class TreeNodeExtensions
     {
         var pathParts = path.Split('\\');
         foreach (var pathPart in pathParts)
-        {
             if (node.HasChild(pathPart))
             {
                 node = node.GetChild(pathPart);
@@ -269,7 +299,6 @@ public static class TreeNodeExtensions
                 node.Add(newNode);
                 node = newNode;
             }
-        }
 
         node.IsolatedSize = size;
     }
@@ -277,10 +306,7 @@ public static class TreeNodeExtensions
     //Populate TreeNode from Path Array
     public static TreeNode PopulateNodeFromPath(this TreeNode node, string[] paths, long[] sizes)
     {
-        for (var i = 0; i < paths.Length; i++)
-        {
-            node.PopulateNodeFromPath(paths[i], sizes[i]);
-        }
+        for (var i = 0; i < paths.Length; i++) node.PopulateNodeFromPath(paths[i], sizes[i]);
 
         return node;
     }
@@ -296,10 +322,7 @@ public static class TreeNodeExtensions
 
         using var sLEnmr = sizesList.GetEnumerator();
         using var pLEnmr = pathsList.GetEnumerator();
-        while (sLEnmr.MoveNext() && pLEnmr.MoveNext())
-        {
-            node.PopulateNodeFromPath(pLEnmr.Current, sLEnmr.Current);
-        }
+        while (sLEnmr.MoveNext() && pLEnmr.MoveNext()) node.PopulateNodeFromPath(pLEnmr.Current, sLEnmr.Current);
 
         return node;
     }
@@ -309,10 +332,7 @@ public static class TreeNodeExtensions
     {
         var node = new TreeNode("ROOT");
         node.PopulateNodeFromPath(path, size);
-        if (node.HasChildren)
-        {
-            node = node.GetChildren()[0];
-        }
+        if (node.HasChildren) node = node.GetChildren()[0];
 
         return node;
     }
@@ -327,10 +347,7 @@ public static class TreeNodeExtensions
         if (descending) sortedChildren.Reverse();
 
         node.Clear();
-        foreach (var child in sortedChildren)
-        {
-            node.Add(child);
-        }
+        foreach (var child in sortedChildren) node.Add(child);
 
         return node;
     }
@@ -345,70 +362,10 @@ public static class TreeNodeExtensions
             return ends;
         }
 
-        foreach (var child in node.GetChildren())
-        {
-            ends.AddRange(child.GetEnds());
-        }
+        foreach (var child in node.GetChildren()) ends.AddRange(child.GetEnds());
 
         return ends;
     }
 
     #endregion
-
-    public static void CalculateTotalSize(this TreeNode node)
-    {
-        var endingNodes = node.GetEnds();
-        var generations = node.SplitByGeneration();
-        for (var i = generations.Count - 1; i >= 1; i--)
-        {
-            for (var j = 0; j < generations[i].Count; j++)
-            {
-                if (endingNodes.Contains(generations[i][j]))
-                {
-                    generations[i][j].TotalSize = generations[i][j].IsolatedSize;
-                }
-                else
-                {
-                    generations[i][j].TotalSize =
-                        generations[i][j].GetSumOfChildrenTotalSizes() + generations[i][j].IsolatedSize;
-                }
-            }
-        }
-    }
-
-    /*private static void EliminateSiblings(this List<TreeNode> ends)
-    {
-        for (var i = 0; i < ends.Count; i++)
-        {
-            for (var j = i + 1; j < ends.Count; j++)
-            {
-                if (ends[i].Parent == null) continue;
-                if (ends[i].Parent == ends[j].Parent)
-                {
-                    ends.RemoveAt(j);
-                    j--;
-                }
-            }
-        }
-    }*/
-
-    public static void AddSafe(this TreeNode parent, TreeNode child)
-    {
-        // recursively check for child.Id in parent.GetChildrenDictionary keys
-        if (parent.HasChild(child.Id))
-        {
-            // if child.Id is found, get the child from the dictionary
-            var existingChild = parent.GetChild(child.Id);
-            // add the child's children to the existing child
-            foreach (var grandchild in child.GetChildren())
-            {
-                existingChild.AddSafe(grandchild);
-            }
-        }
-        else
-        {
-            // if child.Id is not found, add the child to the parent
-            parent.Add(child);
-        }
-    }
 }
