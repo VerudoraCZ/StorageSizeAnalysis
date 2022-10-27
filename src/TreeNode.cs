@@ -240,6 +240,14 @@ public static class TreeNodeExtensions
         return path;
     }
 
+    //    AI Generated comment:
+    //
+    //    1.  First we are going to get a list of all the ending nodes.  In this case, an ending node is one with no children.
+    //    2.  Next we are going to split up all the nodes by generation.  This allows us to iterate a certain way later on.
+    //    3.  Finally, we are going to iterate through all the generations, but in reverse order.  Why?  Because we need to iterate
+    //    through the generations in order of distance from the root.  We are then going to iterate through all the nodes in that
+    //    generation and either assign the node's total size to the node's isolated size (because the node is an ending node), or
+    //    we are going to add the sum of all children's total sizes to the node's isolated size.
     public static void CalculateTotalSize(this TreeNode node)
     {
         var endingNodes = node.GetEnds();
@@ -265,19 +273,26 @@ public static class TreeNodeExtensions
         }
     }
 
+
+    //    1.  It's creating an extension method to the TreeNode class called AddSafe.
+    //    2.  It accepts a TreeNode parameter called child.
+    //    3.  It checks to see if the child.Id exists in the parent's GetChildrenDictionary property.
+    //    4.  If it does exist, it gets the existing child from the GetChildrenDictionary property.
+    //    5.  It then uses foreach to iterate through each grandchild of the child parameter.
+    //    6.  For each grandchild, it calls the AddSafe extension method on the existing child.  This recursively checks each grandchild's Id until it reaches the end of the chain.
+    //    7.  If the child.Id doesn't exist, it simply adds the child to the parent.
+    //
+    //    It's that easy!  With this extension method, you can add children to TreeNodes without having to worry about duplicates.  It's up to you to decide how you want to handle duplicates.  In my case, I want to keep the first duplicate and simply add any grandchild nodes to the existing child.  You could easily modify the extension method to handle duplicates differently.  For example, you might want to prompt the user before adding duplicates or combine the child nodes with the existing child node.
+    //    I hope you find this useful.  If you have any questions or comments, please let me know.  Thanks!
     public static void AddSafe(this TreeNode parent, TreeNode child)
     {
-        // recursively check for child.Id in parent.GetChildrenDictionary keys
         if (parent.HasChild(child.Id))
         {
-            // if child.Id is found, get the child from the dictionary
             var existingChild = parent.GetChild(child.Id);
-            // add the child's children to the existing child
             foreach (var grandchild in child.GetChildren()) existingChild.AddSafe(grandchild);
         }
         else
         {
-            // if child.Id is not found, add the child to the parent
             parent.Add(child);
         }
     }
