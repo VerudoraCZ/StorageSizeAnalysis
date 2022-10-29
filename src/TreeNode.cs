@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Drawing;
 using Pastel;
 using static System.Drawing.Color;
 
@@ -122,13 +123,39 @@ public static class TreeNodeExtensions
 
     private static string BytesToString(this long byteCount)
     {
-        string[] suf = {" B", " KB", " MB", " GB", " TB", " PB", " EB"}; //Longs run out around EB
+        string[] suf = {"B", "KB", "MB", "GB", "TB", "PB", "EB"}; //Longs run out around EB
         if (byteCount == 0) return $"0{suf[0]}";
 
         var bytes = Math.Abs(byteCount);
         var place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
         var num = Math.Round(bytes / Math.Pow(1024, place), 1);
         return $"{Math.Sign(byteCount) * num}{suf[place]}";
+    }
+
+    private static string ColorizeSize(this TreeNode child)
+    {
+        Color color;
+        if (child.Parent!.TotalSize == 0)
+        {
+            color = White;
+        }
+        else
+        {
+            var percentage = child.TotalSize / (double) child.Parent!.TotalSize * 100;
+            Console.WriteLine(percentage);
+            //colorize the percentage
+            color = percentage switch
+            {
+                <= 20 => Green,
+                <= 40 => YellowGreen,
+                <= 60 => Yellow,
+                <= 80 => Orange,
+                <= 100 => Red,
+                _ => Gray
+            };
+        }
+
+        return child.TotalSize.BytesToString().Pastel(color);
     }
 
     private static TreeNode GetRoot(this TreeNode node)
@@ -142,10 +169,10 @@ public static class TreeNodeExtensions
         bool first = true)
     {
         //get current line length
-        var nId = node.Id.Pastel(OrangeRed);
+        var nId = node.Id.Pastel(Yellow);
         if (node.GetRoot().GetEnds().Contains(node)) nId = node.Id.Pastel(Orange);
 
-        var nSize = node.TotalSize.BytesToString().Pastel(Blue);
+        var nSize = node.Parent is null ? node.TotalSize.BytesToString().Pastel(Blue) : node.ColorizeSize();
 
         if (last && !first)
         {
@@ -261,6 +288,7 @@ public static class TreeNodeExtensions
                     generations[i][j].GetSumOfChildrenTotalSizes() + generations[i][j].IsolatedSize;
     }
 
+    // ReSharper disable once UnusedMember.Local
     private static void EliminateSiblings(this IList<TreeNode> ends)
     {
         for (var i = 0; i < ends.Count; i++)

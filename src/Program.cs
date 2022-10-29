@@ -63,7 +63,6 @@ internal static class Program
 
         #endregion
 
-
         PrintEndingMessage(dirs, tree);
 
         SaveExcludedDirList();
@@ -272,7 +271,7 @@ internal static class Program
 
     private static string BytesToString(this long byteCount)
     {
-        string[] suf = {" B", " KB", " MB", " GB", " TB", " PB", " EB"}; //Longs run out around EB
+        string[] suf = {"B", "KB", "MB", "GB", "TB", "PB", "EB"}; //Longs run out around EB
         if (byteCount == 0)
             return "0" + suf[0];
         var bytes = Math.Abs(byteCount);
