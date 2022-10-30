@@ -1,3 +1,3 @@
 # StorageSizeAnalysis
 
-TODO: Write a gem description
+Analyzes storage size
