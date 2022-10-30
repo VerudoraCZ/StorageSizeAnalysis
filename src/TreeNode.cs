@@ -142,7 +142,6 @@ public static class TreeNodeExtensions
         else
         {
             var percentage = child.TotalSize / (double) child.Parent!.TotalSize * 100;
-            Console.WriteLine(percentage);
             //colorize the percentage
             color = percentage switch
             {
