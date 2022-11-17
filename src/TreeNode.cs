@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Drawing;
+using System.Text;
 using Pastel;
 using static System.Drawing.Color;
 
@@ -107,6 +108,34 @@ public class TreeNode : IEnumerable<TreeNode>
 
 public static class TreeNodeExtensions
 {
+    public static void ExportToJson(this TreeNode node, string path, int depth)
+    {
+        var json = node.ToJson(depth);
+        File.WriteAllText(path, json);
+    }
+
+    private static string ToJson(this TreeNode node, int depth)
+    {
+        var sb = new StringBuilder();
+        sb.Append('{');
+        sb.Append($"\"id\": \"{node.Id}\",");
+        sb.Append($"\"isolatedSize\": {node.IsolatedSize},");
+        sb.Append($"\"totalSize\": {node.TotalSize},");
+        sb.Append($"\"children\": [");
+
+        var children = node.GetChildren();
+        for (var i = 0; i < children.Count; i++)
+        {
+            var child = children[i];
+            sb.Append(child.ToJson(depth - 1));
+            if (i < children.Count - 1) sb.Append(",");
+        }
+
+        sb.Append("]}");
+        return sb.ToString();
+    }
+
+
     private static List<List<TreeNode>> SplitByGeneration(this TreeNode root)
     {
         var result = new List<List<TreeNode>>();

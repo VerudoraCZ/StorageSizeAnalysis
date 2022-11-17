@@ -65,6 +65,10 @@ internal static class Program
 
         PrintEndingMessage(dirs, tree);
 
+        //File.WriteAllText("jsonExport.json", Json.Serialize(tree));
+        //TODO: Add json export
+        tree.ExportToJson("jsonExport.json", 1000000);
+
         SaveExcludedDirList();
     }
 

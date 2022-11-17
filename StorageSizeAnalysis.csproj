@@ -16,6 +16,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.2-beta3"/>
         <PackageReference Include="Pastel" Version="3.0.1"/>
     </ItemGroup>
 
