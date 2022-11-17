@@ -73,6 +73,26 @@ internal static class Program
     }
 
 
+    private static bool IsSymbolicLink(string dir)
+    {
+        var dirInfo = new DirectoryInfo(dir);
+        return dirInfo.Attributes.HasFlag(FileAttributes.ReparsePoint);
+    }
+
+    //check if directory is hardlink
+    private static bool IsHardLink(string dir)
+    {
+        var dirInfo = new DirectoryInfo(dir);
+        return dirInfo.Attributes.HasFlag(FileAttributes.Offline);
+    }
+
+    //check if directory is junction
+    private static bool IsSystem(string dir)
+    {
+        var dirInfo = new DirectoryInfo(dir);
+        return dirInfo.Attributes.HasFlag(FileAttributes.System);
+    }
+
     private static void ConsoleCancelKeyPressEvent(object? sender, ConsoleCancelEventArgs e)
     {
         SaveExcludedDirList();
@@ -202,7 +222,9 @@ internal static class Program
 
     private static List<Task<List<string>>> GetDirectories(string path, int depth)
     {
-        var dirs = Directory.GetDirectories(path + "\\").Where(d => !_excluded.Any(d.StartsWith));
+        var dirs = Directory.GetDirectories(path + "\\").Where(
+                d => !_excluded.Any(d.StartsWith) || IsSymbolicLink(path) || IsHardLink(path) /*|| IsSystem(path)*/)
+            .ToList();
 
         return dirs.Select(dir => Task.Run(() =>
         {
@@ -216,6 +238,7 @@ internal static class Program
         try
         {
             if (_excluded.Any(path.StartsWith)) return new List<string>();
+            if (IsSymbolicLink(path) || IsHardLink(path) /* || IsSystem(path)*/) return new List<string>();
 
             var resultDirectories = new List<string>();
             var directories = Directory.GetDirectories(path);
@@ -237,6 +260,16 @@ internal static class Program
         catch (DirectoryNotFoundException)
         {
             Console.WriteLine($"Could not find a part of the path (Not included): {path}".Pastel(Red));
+            return new List<string>();
+        }
+        catch (AggregateException e)
+        {
+            Console.WriteLine($"Aggregate Exception (Not included): {path} ({e})".Pastel(Red));
+            return new List<string>();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Exception (Not included): {path} ({e})".Pastel(Red));
             return new List<string>();
         }
     }
@@ -261,6 +294,16 @@ internal static class Program
         catch (DirectoryNotFoundException)
         {
             Console.WriteLine($"Could not find a part of the path (Not included): {path}".Pastel(Red));
+            return 0;
+        }
+        catch (AggregateException e)
+        {
+            Console.WriteLine($"Aggregate Exception (Not included): {path} ({e})".Pastel(Red));
+            return 0;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Exception (Not included): {path} ({e})".Pastel(Red));
             return 0;
         }
     }
