@@ -247,7 +247,7 @@ internal static class Program
             var directories = Directory.GetDirectories(path);
             foreach (var directory in directories)
             {
-                Console.WriteLine(directory);
+                //Console.WriteLine(directory);
                 resultDirectories.Add(directory);
                 if (depth > 0) resultDirectories.AddRange(GetSubDirectories(directory, depth - 1));
             }
