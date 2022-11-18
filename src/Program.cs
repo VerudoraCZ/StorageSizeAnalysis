@@ -38,8 +38,12 @@ internal static class Program
 
         #endregion
 
-        var argRoot = tree.GetNodeFromPath(args[0]);
-        argRoot.SetParent(null);
+        var argRoot = tree;
+        if (tree.HasChildren)
+        {
+            argRoot = tree.GetNodeFromPath(args[0]);
+            argRoot.SetParent(null);
+        }
 
         #region argRoot.SortChildren();
 
@@ -65,14 +69,13 @@ internal static class Program
 
         PrintEndingMessage(dirs, tree);
 
-        //File.WriteAllText("jsonExport.json", Json.Serialize(tree));
-        //TODO: Add json export
         tree.ExportToJson("jsonExport.json", 1000000);
 
         SaveExcludedDirList();
     }
 
 
+    //check if directory is symlink
     private static bool IsSymbolicLink(string dir)
     {
         var dirInfo = new DirectoryInfo(dir);
@@ -86,7 +89,7 @@ internal static class Program
         return dirInfo.Attributes.HasFlag(FileAttributes.Offline);
     }
 
-    //check if directory is junction
+    //check if directory is system
     private static bool IsSystem(string dir)
     {
         var dirInfo = new DirectoryInfo(dir);
@@ -207,7 +210,7 @@ internal static class Program
 
     private static IList<Task<List<TreeNode>>> CompileDirsAndSizes(string[] dirs)
     {
-        var chunks = dirs.ChunkBy(500);
+        var chunks = dirs.ChunkBy(2000);
         var tasks = chunks.Select(chunk => Task.Run(() =>
             {
                 var nodes = chunk.Select(dir => TreeNodeExtensions.CreateNodeFromPath(dir, GetSizeOfDirectory(dir)))
@@ -222,9 +225,9 @@ internal static class Program
 
     private static List<Task<List<string>>> GetDirectories(string path, int depth)
     {
-        var dirs = Directory.GetDirectories(path + "\\").Where(
-                d => !_excluded.Any(d.StartsWith) || IsSymbolicLink(path) || IsHardLink(path) /*|| IsSystem(path)*/)
-            .ToList();
+        var dirs = Directory.GetDirectories(path + @"\")
+            .Where(d => !_excluded.Any(d.StartsWith) || IsSymbolicLink(path) || IsHardLink(path)).ToList();
+        dirs.Add(path);
 
         return dirs.Select(dir => Task.Run(() =>
         {
@@ -238,13 +241,13 @@ internal static class Program
         try
         {
             if (_excluded.Any(path.StartsWith)) return new List<string>();
-            if (IsSymbolicLink(path) || IsHardLink(path) /* || IsSystem(path)*/) return new List<string>();
+            if (IsSymbolicLink(path) || IsHardLink(path)) return new List<string>();
 
             var resultDirectories = new List<string>();
             var directories = Directory.GetDirectories(path);
             foreach (var directory in directories)
             {
-                /*Console.WriteLine(directory);*/
+                Console.WriteLine(directory);
                 resultDirectories.Add(directory);
                 if (depth > 0) resultDirectories.AddRange(GetSubDirectories(directory, depth - 1));
             }
